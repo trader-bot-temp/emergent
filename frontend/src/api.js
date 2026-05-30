@@ -54,7 +54,7 @@ export const candidatesApi = {
   listByJob: (jobId) => client.get(`/candidates/job/${jobId}`),
   get: (id) => client.get(`/candidates/${id}`),
   updateStage: (id, data) => client.put(`/candidates/${id}/stage`, data),
-  bulkStage: (data) => client.put(`/candidates/bulk/stage`, data),
+  bulkStage: (data) => client.put(`/candidates/bulk-stage`, data),
   addNote: (id, note) => client.post(`/candidates/${id}/note`, { note }),
   remove: (id) => client.delete(`/candidates/${id}`),
 };

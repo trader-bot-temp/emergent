@@ -26,10 +26,11 @@ if not BASE_URL:
 
 API = f"{BASE_URL}/api"
 
-HR_EMAIL = "sarah@hireflow.com"
-HR_PASSWORD = "Sarah@1234"
-ADMIN_EMAIL = "admin@hireflow.com"
-ADMIN_PASSWORD = "Admin@1234"
+# Credentials loaded from environment (fallback to seeded demo accounts for local runs).
+HR_EMAIL = os.getenv("HIREFLOW_HR_EMAIL", "sarah@hireflow.com")
+HR_PASSWORD = os.getenv("HIREFLOW_HR_PASSWORD", "Sarah@1234")
+ADMIN_EMAIL = os.getenv("HIREFLOW_ADMIN_EMAIL", "admin@hireflow.com")
+ADMIN_PASSWORD = os.getenv("HIREFLOW_ADMIN_PASSWORD", "Admin@1234")
 
 
 # ---------- fixtures ----------
@@ -240,7 +241,7 @@ class TestCandidates:
         assert n.json()["text"] == "TEST note"
 
         # Bulk stage update
-        b = requests.put(f"{API}/candidates/bulk/stage",
+        b = requests.put(f"{API}/candidates/bulk-stage",
                          json={"candidate_ids": [cid], "stage": "Contact Pending"},
                          headers=hr_headers, timeout=15)
         assert b.status_code == 200

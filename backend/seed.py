@@ -16,14 +16,9 @@ SAMPLE_RESUME = (
 )
 
 
-async def seed_if_empty():
-    existing = await users.count_documents({})
-    if existing > 0:
-        return
-
-    # --- Users ---
-    admin_id = str(uuid.uuid4())
-    hr_id = str(uuid.uuid4())
+async def _seed_users() -> tuple[str, str]:
+    """Insert demo admin + HR users. Returns (admin_id, hr_id)."""
+    admin_id, hr_id = str(uuid.uuid4()), str(uuid.uuid4())
     await users.insert_many([
         {
             "id": admin_id, "name": "Alex Admin", "email": "admin@hireflow.com",
@@ -36,10 +31,12 @@ async def seed_if_empty():
             "role": "hr", "is_active": 1, "last_login_at": _now_iso(0), "created_at": _now_iso(30),
         },
     ])
+    return admin_id, hr_id
 
-    # --- Jobs for Sarah ---
-    job1 = str(uuid.uuid4())
-    job2 = str(uuid.uuid4())
+
+async def _seed_jobs(hr_id: str) -> tuple[str, str]:
+    """Insert two demo jobs for the HR user. Returns (job1_id, job2_id)."""
+    job1, job2 = str(uuid.uuid4()), str(uuid.uuid4())
     await jobs.insert_many([
         {
             "id": job1, "user_id": hr_id, "title": "Senior Frontend Engineer",
@@ -59,10 +56,12 @@ async def seed_if_empty():
             "created_at": _now_iso(18), "updated_at": _now_iso(2),
         },
     ])
+    return job1, job2
 
-    # --- Candidates ---
-    samples = [
-        # (job, name, email, phone, years, skills, stage, score, summary, matched, missing, flags, days)
+
+def _candidate_samples(job1: str, job2: str) -> list:
+    # (job, name, email, phone, years, skills, stage, score, summary, matched, missing, flags, days)
+    return [
         (job1, "Priya Sharma", "priya.sharma@email.com", "+1 415 555 0101", 7,
          "React, TypeScript, Next.js, Redux, Jest, Accessibility",
          "Shortlisted", 92, "Outstanding frontend engineer with deep React and TypeScript expertise and a strong design-systems background.",
@@ -88,26 +87,45 @@ async def seed_if_empty():
          "Applied", None, None, [], [], [], 4),
     ]
 
-    cand_docs = []
-    transition_docs = []
-    for (job, name, email, phone, years, skills, stage, score, summary, matched, missing, flags, days) in samples:
-        cid = str(uuid.uuid4())
-        analyzed = score is not None
-        cand_docs.append({
-            "id": cid, "job_id": job, "name": name, "email": email, "phone": phone,
-            "resume_text": SAMPLE_RESUME.format(name=name, email=email, phone=phone, years=years, skills=skills),
-            "pdf_path": None, "pdf_original_name": f"{name.replace(' ', '_')}_Resume.pdf",
-            "stage": stage, "ai_score": score, "ai_summary": summary,
-            "matched_skills": matched, "missing_skills": missing, "red_flags": flags,
-            "notes": [], "uploaded_at": _now_iso(days), "analyzed_at": _now_iso(days - 1) if analyzed else None,
-        })
-        if stage != "Applied":
-            transition_docs.append({
-                "id": str(uuid.uuid4()), "candidate_id": cid, "from_stage": "AI Ranked",
-                "to_stage": stage, "note": None, "moved_by": "Sarah Chen",
-                "moved_at": _now_iso(max(days - 3, 0)),
-            })
 
+def _build_candidate_record(sample: tuple) -> tuple[dict, dict | None]:
+    """Build a candidate doc (and optional transition doc) from a sample tuple."""
+    (job, name, email, phone, years, skills, stage, score, summary, matched, missing, flags, days) = sample
+    cid = str(uuid.uuid4())
+    analyzed = score is not None
+    cand = {
+        "id": cid, "job_id": job, "name": name, "email": email, "phone": phone,
+        "resume_text": SAMPLE_RESUME.format(name=name, email=email, phone=phone, years=years, skills=skills),
+        "pdf_path": None, "pdf_original_name": f"{name.replace(' ', '_')}_Resume.pdf",
+        "stage": stage, "ai_score": score, "ai_summary": summary,
+        "matched_skills": matched, "missing_skills": missing, "red_flags": flags,
+        "notes": [], "uploaded_at": _now_iso(days), "analyzed_at": _now_iso(days - 1) if analyzed else None,
+    }
+    transition = None
+    if stage != "Applied":
+        transition = {
+            "id": str(uuid.uuid4()), "candidate_id": cid, "from_stage": "AI Ranked",
+            "to_stage": stage, "note": None, "moved_by": "Sarah Chen",
+            "moved_at": _now_iso(max(days - 3, 0)),
+        }
+    return cand, transition
+
+
+async def _seed_candidates(job1: str, job2: str):
+    cand_docs, transition_docs = [], []
+    for sample in _candidate_samples(job1, job2):
+        cand, transition = _build_candidate_record(sample)
+        cand_docs.append(cand)
+        if transition:
+            transition_docs.append(transition)
     await candidates.insert_many(cand_docs)
     if transition_docs:
         await stage_transitions.insert_many(transition_docs)
+
+
+async def seed_if_empty():
+    if await users.count_documents({}) > 0:
+        return
+    _admin_id, hr_id = await _seed_users()
+    job1, job2 = await _seed_jobs(hr_id)
+    await _seed_candidates(job1, job2)

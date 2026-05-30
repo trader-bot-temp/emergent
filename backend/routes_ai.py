@@ -17,6 +17,40 @@ def _chunk(lst, n):
         yield lst[i:i + n]
 
 
+def _build_rank_set_doc(result: dict, current_stage: str, now: str) -> dict:
+    set_doc = {
+        "ai_score": int(result.get("score", 0)),
+        "ai_summary": result.get("summary"),
+        "matched_skills": result.get("matched_skills", []),
+        "missing_skills": result.get("missing_skills", []),
+        "red_flags": result.get("red_flags", []),
+        "analyzed_at": now,
+    }
+    if current_stage == "Applied":
+        set_doc["stage"] = "AI Ranked"
+    return set_doc
+
+
+async def _rank_batch(jd_text: str, batch: list) -> list:
+    """Run AI ranking on one batch and persist results. Returns updated candidates."""
+    raw = await ai.call_ai(ai.RANK_SYSTEM, ai.build_rank_prompt(jd_text, batch))
+    parsed = ai.parse_ai_json(raw)
+    if not isinstance(parsed, list):
+        return []
+    result_map = {str(r.get("id")): r for r in parsed if isinstance(r, dict)}
+    now = datetime.now(timezone.utc).isoformat()
+    updated = []
+    for c in batch:
+        result = result_map.get(c["id"])
+        if not result:
+            continue
+        set_doc = _build_rank_set_doc(result, c.get("stage"), now)
+        await candidates.update_one({"id": c["id"]}, {"$set": set_doc})
+        c.update(set_doc)
+        updated.append(c)
+    return updated
+
+
 @router.post("/rank")
 async def rank_candidates(body: RankRequest, user: dict = Depends(get_current_user)):
     job = await jobs.find_one({"id": body.job_id, "user_id": user["id"]}, {"_id": 0})
@@ -34,31 +68,7 @@ async def rank_candidates(body: RankRequest, user: dict = Depends(get_current_us
 
     updated = []
     for batch in _chunk(cands, 10):
-        prompt = ai.build_rank_prompt(job["jd_text"], batch)
-        raw = await ai.call_ai(ai.RANK_SYSTEM, prompt)
-        parsed = ai.parse_ai_json(raw)
-        if not isinstance(parsed, list):
-            continue
-        result_map = {str(r.get("id")): r for r in parsed if isinstance(r, dict)}
-        now = datetime.now(timezone.utc).isoformat()
-        for c in batch:
-            r = result_map.get(c["id"])
-            if not r:
-                continue
-            set_doc = {
-                "ai_score": int(r.get("score", 0)),
-                "ai_summary": r.get("summary"),
-                "matched_skills": r.get("matched_skills", []),
-                "missing_skills": r.get("missing_skills", []),
-                "red_flags": r.get("red_flags", []),
-                "analyzed_at": now,
-            }
-            # Promote from Applied to AI Ranked
-            if c.get("stage") == "Applied":
-                set_doc["stage"] = "AI Ranked"
-            await candidates.update_one({"id": c["id"]}, {"$set": set_doc})
-            c.update(set_doc)
-            updated.append(c)
+        updated.extend(await _rank_batch(job["jd_text"], batch))
 
     await ai.log_usage("rank", user_id=user["id"], job_id=body.job_id)
     return {"updated": updated, "count": len(updated)}

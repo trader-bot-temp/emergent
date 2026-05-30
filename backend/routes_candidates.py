@@ -31,16 +31,20 @@ def extract_pdf_text(content: bytes) -> str:
         return ""
 
 
+def _looks_like_name(line: str) -> bool:
+    """Heuristic: a short line of 2-4 capitalized words, no email/digits."""
+    if "@" in line or len(line) >= 50 or any(ch.isdigit() for ch in line):
+        return False
+    words = line.split()
+    if not (1 < len(words) <= 4):
+        return False
+    return all(w[0].isupper() for w in words if w[:1].isalpha())
+
+
 def guess_name(text: str, filename: str) -> str:
-    lines = [ln.strip() for ln in text.split("\n") if ln.strip()]
-    for line in lines[:5]:
-        # A line that looks like a name: 2-4 words, mostly alpha, no email/digits
-        if "@" in line or any(ch.isdigit() for ch in line):
-            continue
-        words = line.split()
-        if 1 < len(words) <= 4 and all(w[0].isupper() for w in words if w[:1].isalpha()):
-            if len(line) < 50:
-                return line
+    for line in (ln.strip() for ln in text.split("\n")[:8] if ln.strip()):
+        if _looks_like_name(line):
+            return line
     # fallback: filename without extension
     base = os.path.splitext(filename)[0]
     return re.sub(r"[_-]+", " ", base).strip().title() or "Unknown Candidate"
@@ -156,7 +160,7 @@ async def update_stage(candidate_id: str, body: StageUpdate, user: dict = Depend
     return {"success": True, "stage": body.stage, "quota_met": quota_met}
 
 
-@router.put("/bulk/stage")
+@router.put("/bulk-stage")
 async def bulk_update_stage(body: BulkStageUpdate, user: dict = Depends(get_current_user)):
     if body.stage not in STAGES:
         raise HTTPException(status_code=400, detail="Invalid stage")
