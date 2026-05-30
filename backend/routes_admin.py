@@ -167,50 +167,63 @@ def _daily_series(timestamps: list, days: int) -> list:
     return [{"date": k, "count": v} for k, v in buckets.items()]
 
 
+def _weekly_jobs_series(all_jobs: list, weeks: int = 12) -> list:
+    today = datetime.now(timezone.utc).date()
+    week_buckets = {
+        (today - timedelta(days=today.weekday() + 7 * i)).isoformat(): 0
+        for i in range(weeks - 1, -1, -1)
+    }
+    for j in all_jobs:
+        d = _parse(j["created_at"])
+        if not d:
+            continue
+        wk = (d.date() - timedelta(days=d.date().weekday())).isoformat()
+        if wk in week_buckets:
+            week_buckets[wk] += 1
+    return [{"week": k, "count": v} for k, v in week_buckets.items()]
+
+
+def _analytics_metrics(all_users: list, all_jobs: list, all_cands: list, ai_logs: list) -> dict:
+    user_name = {u["id"]: u["name"] for u in all_users}
+    most_active = Counter(a.get("user_id") for a in ai_logs if a.get("user_id")).most_common(1)
+    most_title = Counter(j["title"] for j in all_jobs).most_common(1)
+    scored = [c["ai_score"] for c in all_cands if c.get("ai_score") is not None]
+    return {
+        "most_active_user": user_name.get(most_active[0][0], "—") if most_active else "—",
+        "most_popular_title": most_title[0][0] if most_title else "—",
+        "avg_resumes_per_job": round(len(all_cands) / len(all_jobs), 1) if all_jobs else 0,
+        "avg_ai_score": round(sum(scored) / len(scored)) if scored else 0,
+    }
+
+
 @router.get("/analytics")
-async def admin_analytics(admin: dict = Depends(require_admin)):
+async def admin_analytics(admin: dict = Depends(require_admin)) -> dict:
     all_users = await users.find({}, {"_id": 0, "created_at": 1, "name": 1, "id": 1}).to_list(2000)
     all_jobs = await jobs.find({}, {"_id": 0, "created_at": 1, "title": 1, "user_id": 1, "id": 1}).to_list(20000)
     all_cands = await candidates.find({}, {"_id": 0, "uploaded_at": 1, "ai_score": 1, "job_id": 1}).to_list(100000)
     ai_logs = await ai_usage_log.find({}, {"_id": 0, "created_at": 1, "user_id": 1}).to_list(100000)
 
-    signups = _daily_series([u["created_at"] for u in all_users], 30)
-    resumes = _daily_series([c["uploaded_at"] for c in all_cands], 30)
-    ai_usage = _daily_series([a["created_at"] for a in ai_logs], 30)
-
-    # Jobs weekly (last 12 weeks)
-    today = datetime.now(timezone.utc).date()
-    week_buckets = {}
-    for i in range(11, -1, -1):
-        wk_start = today - timedelta(days=today.weekday() + 7 * i)
-        week_buckets[wk_start.isoformat()] = 0
-    for j in all_jobs:
-        d = _parse(j["created_at"])
-        if d:
-            wk = (d.date() - timedelta(days=d.date().weekday())).isoformat()
-            if wk in week_buckets:
-                week_buckets[wk] += 1
-    jobs_weekly = [{"week": k, "count": v} for k, v in week_buckets.items()]
-
-    # Metric cards
-    user_name = {u["id"]: u["name"] for u in all_users}
-    ai_by_user = Counter(a.get("user_id") for a in ai_logs if a.get("user_id"))
-    most_active = ai_by_user.most_common(1)
-    title_counter = Counter(j["title"] for j in all_jobs)
-    most_title = title_counter.most_common(1)
-    scored = [c["ai_score"] for c in all_cands if c.get("ai_score") is not None]
-
     return {
-        "signups": signups,
-        "jobs_weekly": jobs_weekly,
-        "resumes": resumes,
-        "ai_usage": ai_usage,
-        "metrics": {
-            "most_active_user": user_name.get(most_active[0][0], "—") if most_active else "—",
-            "most_popular_title": most_title[0][0] if most_title else "—",
-            "avg_resumes_per_job": round(len(all_cands) / len(all_jobs), 1) if all_jobs else 0,
-            "avg_ai_score": round(sum(scored) / len(scored)) if scored else 0,
-        },
+        "signups": _daily_series([u["created_at"] for u in all_users], 30),
+        "jobs_weekly": _weekly_jobs_series(all_jobs),
+        "resumes": _daily_series([c["uploaded_at"] for c in all_cands], 30),
+        "ai_usage": _daily_series([a["created_at"] for a in ai_logs], 30),
+        "metrics": _analytics_metrics(all_users, all_jobs, all_cands, ai_logs),
+    }
+
+
+async def _ai_usage_summary(total: int, user_map: dict) -> dict:
+    month_start = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    all_logs = await ai_usage_log.find({}, {"_id": 0, "action": 1, "user_id": 1, "created_at": 1}).to_list(100000)
+    epoch = datetime.min.replace(tzinfo=timezone.utc)
+    this_month = sum(1 for lg in all_logs if (_parse(lg.get("created_at")) or epoch) >= month_start)
+    most_feature = Counter(lg.get("action") for lg in all_logs).most_common(1)
+    most_user = Counter(lg.get("user_id") for lg in all_logs if lg.get("user_id")).most_common(1)
+    return {
+        "calls_this_month": this_month,
+        "total_calls": len(all_logs),
+        "most_used_feature": ACTION_LABELS.get(most_feature[0][0], most_feature[0][0]) if most_feature else "—",
+        "most_active_user": user_map.get(most_user[0][0], "—") if most_user else "—",
     }
 
 
@@ -219,7 +232,7 @@ async def admin_ai_usage(
     admin: dict = Depends(require_admin),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
-):
+) -> dict:
     all_users = await users.find({}, {"_id": 0, "id": 1, "name": 1}).to_list(2000)
     user_map = {u["id"]: u["name"] for u in all_users}
 
@@ -237,25 +250,10 @@ async def admin_ai_usage(
         }
         for lg in logs
     ]
-
-    # Summary (this month)
-    month_start = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    all_logs = await ai_usage_log.find({}, {"_id": 0, "action": 1, "user_id": 1, "created_at": 1}).to_list(100000)
-    this_month = [lg for lg in all_logs if (_parse(lg.get("created_at")) or datetime.min.replace(tzinfo=timezone.utc)) >= month_start]
-    action_counter = Counter(lg.get("action") for lg in all_logs)
-    user_counter = Counter(lg.get("user_id") for lg in all_logs if lg.get("user_id"))
-    most_feature = action_counter.most_common(1)
-    most_user = user_counter.most_common(1)
-
     return {
         "total": total,
         "page": page,
         "page_size": page_size,
         "items": items,
-        "summary": {
-            "calls_this_month": len(this_month),
-            "total_calls": len(all_logs),
-            "most_used_feature": ACTION_LABELS.get(most_feature[0][0], most_feature[0][0]) if most_feature else "—",
-            "most_active_user": user_map.get(most_user[0][0], "—") if most_user else "—",
-        },
+        "summary": await _ai_usage_summary(total, user_map),
     }

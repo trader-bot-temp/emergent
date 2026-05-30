@@ -21,7 +21,7 @@ api_router = APIRouter(prefix="/api")
 
 
 @api_router.get("/")
-async def root():
+async def root() -> dict:
     return {"message": "HireFlow API running"}
 
 
@@ -51,7 +51,7 @@ logger = logging.getLogger(__name__)
 
 
 @app.on_event("startup")
-async def startup():
+async def startup() -> None:
     await ensure_indexes()
     await seed_if_empty()
     logger.info("HireFlow API started, indexes ensured, seed checked")

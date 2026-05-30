@@ -23,7 +23,7 @@ UPLOAD_DIR = ROOT_DIR / "data" / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
-async def ensure_indexes():
+async def ensure_indexes() -> None:
     await users.create_index("email", unique=True)
     await jobs.create_index("user_id")
     await candidates.create_index("job_id")

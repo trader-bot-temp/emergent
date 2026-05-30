@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 from datetime import datetime, timezone, timedelta
+from typing import Optional
 from collections import Counter
 
 from database import jobs, candidates, stage_transitions
@@ -14,14 +15,14 @@ STAGES = [
 HIRED_STAGE = "Selected"
 
 
-def _parse(dt: str):
+def _parse(dt: str) -> Optional[datetime]:
     try:
         return datetime.fromisoformat(dt)
     except (ValueError, TypeError):
         return None
 
 
-async def _time_to_hire(user_jobs, cands_by_job) -> list:
+async def _time_to_hire(user_jobs: list, cands_by_job: dict) -> list:
     """Avg days from upload to Selected per job."""
     results = []
     for j in user_jobs:
@@ -43,13 +44,13 @@ async def _time_to_hire(user_jobs, cands_by_job) -> list:
     return results
 
 
-def _stage_funnel(all_cands) -> list:
+def _stage_funnel(all_cands: list) -> list:
     counts = Counter(c.get("stage") for c in all_cands)
     return [{"stage": s, "count": counts.get(s, 0)} for s in STAGES]
 
 
-def _skill_gap(all_cands) -> list:
-    counter = Counter()
+def _skill_gap(all_cands: list) -> list:
+    counter: Counter = Counter()
     for c in all_cands:
         if c.get("stage") == "Rejected":
             for skill in (c.get("missing_skills") or []):
@@ -62,7 +63,7 @@ def _skill_gap(all_cands) -> list:
     return [{"skill": k, "count": v} for k, v in counter.most_common(10)]
 
 
-def _quota_tracker(user_jobs, cands_by_job) -> list:
+def _quota_tracker(user_jobs: list, cands_by_job: dict) -> list:
     rows = []
     for j in user_jobs:
         cs = cands_by_job.get(j["id"], [])
@@ -86,7 +87,7 @@ def _quota_tracker(user_jobs, cands_by_job) -> list:
 
 
 @router.get("")
-async def reports(user: dict = Depends(get_current_user)):
+async def reports(user: dict = Depends(get_current_user)) -> dict:
     user_jobs = await jobs.find({"user_id": user["id"]}, {"_id": 0}).to_list(1000)
     job_ids = [j["id"] for j in user_jobs]
     all_cands = await candidates.find(

@@ -21,10 +21,10 @@ if not BASE_URL:
                 break
 API = f"{BASE_URL}/api"
 
-HR_EMAIL = "sarah@hireflow.com"
-HR_PASSWORD = "Sarah@1234"
-ADMIN_EMAIL = "admin@hireflow.com"
-ADMIN_PASSWORD = "Admin@1234"
+HR_EMAIL = os.getenv("HIREFLOW_HR_EMAIL", "sarah@hireflow.com")
+HR_PASSWORD = os.getenv("HIREFLOW_HR_PASSWORD", "Sarah@1234")
+ADMIN_EMAIL = os.getenv("HIREFLOW_ADMIN_EMAIL", "admin@hireflow.com")
+ADMIN_PASSWORD = os.getenv("HIREFLOW_ADMIN_PASSWORD", "Admin@1234")
 
 
 def _login(email, password):
