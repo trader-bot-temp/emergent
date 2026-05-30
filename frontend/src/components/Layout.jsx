@@ -45,6 +45,9 @@ export function Sidebar() {
         {isAdmin && (
           <>
             <div className="text-[10px] uppercase tracking-wider text-white/25 px-5 py-2 mt-4">Admin</div>
+            <NavLink to="/admin" end className={navItem} data-testid="nav-admin-dashboard">
+              <LayoutDashboard size={17} /> Admin Dashboard
+            </NavLink>
             <NavLink to="/admin/users" className={navItem} data-testid="nav-admin-users">
               <Users size={17} /> User Management
             </NavLink>

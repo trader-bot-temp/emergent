@@ -12,6 +12,8 @@ import routes_jobs
 import routes_candidates
 import routes_ai
 import routes_dashboard
+import routes_admin
+import routes_reports
 
 app = FastAPI(title="HireFlow API")
 
@@ -28,6 +30,8 @@ api_router.include_router(routes_jobs.router)
 api_router.include_router(routes_candidates.router)
 api_router.include_router(routes_ai.router)
 api_router.include_router(routes_dashboard.router)
+api_router.include_router(routes_admin.router)
+api_router.include_router(routes_reports.router)
 
 app.include_router(api_router)
 

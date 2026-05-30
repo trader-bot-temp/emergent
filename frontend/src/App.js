@@ -10,7 +10,12 @@ import JobCreate from "@/pages/JobCreate";
 import JobDetail from "@/pages/JobDetail";
 import CandidateBoard from "@/pages/CandidateBoard";
 import CandidateDetail from "@/pages/CandidateDetail";
-import ComingSoon from "@/pages/ComingSoon";
+import Reports from "@/pages/Reports";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AdminUsers from "@/pages/admin/AdminUsers";
+import AdminResumes from "@/pages/admin/AdminResumes";
+import AdminAnalytics from "@/pages/admin/AdminAnalytics";
+import AdminAIUsage from "@/pages/admin/AdminAIUsage";
 
 function FullScreenLoader() {
   return (
@@ -54,12 +59,13 @@ function AppRoutes() {
       <Route path="/jobs/:id" element={<PrivateRoute><JobDetail /></PrivateRoute>} />
       <Route path="/jobs/:id/board" element={<PrivateRoute><CandidateBoard /></PrivateRoute>} />
       <Route path="/candidates/:id" element={<PrivateRoute><CandidateDetail /></PrivateRoute>} />
-      <Route path="/reports" element={<PrivateRoute><ComingSoon title="Reports" /></PrivateRoute>} />
+      <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
 
-      <Route path="/admin/users" element={<AdminRoute><ComingSoon title="User Management" /></AdminRoute>} />
-      <Route path="/admin/resumes" element={<AdminRoute><ComingSoon title="Uploaded Resumes" /></AdminRoute>} />
-      <Route path="/admin/analytics" element={<AdminRoute><ComingSoon title="System Analytics" /></AdminRoute>} />
-      <Route path="/admin/ai-usage" element={<AdminRoute><ComingSoon title="AI Usage & Cost" /></AdminRoute>} />
+      <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+      <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+      <Route path="/admin/resumes" element={<AdminRoute><AdminResumes /></AdminRoute>} />
+      <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
+      <Route path="/admin/ai-usage" element={<AdminRoute><AdminAIUsage /></AdminRoute>} />
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

@@ -75,4 +75,20 @@ export const dashboardApi = {
   get: () => client.get("/dashboard"),
 };
 
+// ---- Admin ----
+export const adminApi = {
+  dashboard: () => client.get("/admin/dashboard"),
+  users: () => client.get("/admin/users"),
+  setStatus: (id, is_active) => client.put(`/admin/users/${id}/status`, { is_active }),
+  setRole: (id, role) => client.put(`/admin/users/${id}/role`, { role }),
+  resumes: (page = 1, page_size = 50) => client.get(`/admin/resumes?page=${page}&page_size=${page_size}`),
+  analytics: () => client.get("/admin/analytics"),
+  aiUsage: (page = 1, page_size = 50) => client.get(`/admin/ai-usage?page=${page}&page_size=${page_size}`),
+};
+
+// ---- Reports ----
+export const reportsApi = {
+  get: () => client.get("/reports"),
+};
+
 export default client;
