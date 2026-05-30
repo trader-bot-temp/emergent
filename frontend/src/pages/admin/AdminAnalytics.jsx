@@ -58,7 +58,7 @@ export default function AdminAnalytics() {
 
         <div className="grid md:grid-cols-2 gap-6">
           <ChartCard title="New Signups (30 days)" icon={UserPlus}>
-            <ResponsiveContainer>
+            <ResponsiveContainer minHeight={240}>
               <LineChart data={data.signups} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                 <XAxis dataKey="date" tickFormatter={shortDate} tick={{ fontSize: 11, fill: "#9ca3af" }} interval="preserveStartEnd" />
@@ -70,7 +70,7 @@ export default function AdminAnalytics() {
           </ChartCard>
 
           <ChartCard title="Jobs Created (12 weeks)" icon={Briefcase}>
-            <ResponsiveContainer>
+            <ResponsiveContainer minHeight={240}>
               <BarChart data={data.jobs_weekly} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                 <XAxis dataKey="week" tickFormatter={shortDate} tick={{ fontSize: 11, fill: "#9ca3af" }} interval="preserveStartEnd" />
@@ -82,7 +82,7 @@ export default function AdminAnalytics() {
           </ChartCard>
 
           <ChartCard title="Resumes Uploaded (30 days)" icon={FileText}>
-            <ResponsiveContainer>
+            <ResponsiveContainer minHeight={240}>
               <AreaChart data={data.resumes} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="tealGrad" x1="0" y1="0" x2="0" y2="1">
@@ -100,7 +100,7 @@ export default function AdminAnalytics() {
           </ChartCard>
 
           <ChartCard title="AI Usage (30 days)" icon={Sparkles}>
-            <ResponsiveContainer>
+            <ResponsiveContainer minHeight={240}>
               <LineChart data={data.ai_usage} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                 <XAxis dataKey="date" tickFormatter={shortDate} tick={{ fontSize: 11, fill: "#9ca3af" }} interval="preserveStartEnd" />

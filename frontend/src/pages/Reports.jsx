@@ -32,7 +32,7 @@ export default function Reports() {
             <h3 className="font-semibold text-gray-800 flex items-center gap-2 mb-4"><Clock size={16} className="text-indigo" /> Time-to-Hire (avg days)</h3>
             {data?.time_to_hire?.length ? (
               <div style={{ width: "100%", height: 240 }}>
-                <ResponsiveContainer>
+                <ResponsiveContainer minHeight={240}>
                   <BarChart data={data.time_to_hire} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 11, fill: "#9ca3af" }} />
@@ -71,7 +71,7 @@ export default function Reports() {
             <h3 className="font-semibold text-gray-800 flex items-center gap-2 mb-4"><TrendingDown size={16} className="text-coral" /> Top Missing Skills</h3>
             {data?.skill_gap?.length ? (
               <div style={{ width: "100%", height: 240 }}>
-                <ResponsiveContainer>
+                <ResponsiveContainer minHeight={240}>
                   <BarChart data={data.skill_gap} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
                     <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: "#9ca3af" }} />

@@ -34,11 +34,6 @@ def _parse(dt: str):
         return None
 
 
-def _public(u: dict) -> dict:
-    u.pop("password_hash", None)
-    return u
-
-
 async def _enrich_users() -> list:
     """Attach jobs_count, resumes_count, ai_calls to every user."""
     all_users = await users.find({}, {"_id": 0, "password_hash": 0}).to_list(2000)
