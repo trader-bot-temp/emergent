@@ -4,39 +4,16 @@ import json
 import uuid
 from datetime import datetime, timezone
 
-# ============================================================
-# AI PROVIDER CONFIGURATION
-# Currently using: Grok (xAI)
-#
-# TO SWITCH TO A DIFFERENT AI PROVIDER IN THE FUTURE:
-#   - Change GROK_API_KEY variable name to your new key name
-#   - Change base_url to your new provider's URL:
-#       OpenAI:    base_url="https://api.openai.com/v1"  (remove base_url entirely, it's default)
-#       Anthropic: use "anthropic" package instead of openai
-#       Gemini:    use "google-generativeai" package
-#   - Change AI_MODEL to your new model name
-#   - The call_ai() function signature stays the same — nothing else needs to change
-# ============================================================
-
-from openai import AsyncOpenAI
+from groq import AsyncGroq
 from database import ai_usage_log
 
-# Read from environment variables (set in Railway dashboard)
-GROK_API_KEY = os.environ["GROK_API_KEY"]
-AI_MODEL = os.environ.get("AI_MODEL", "grok-2-latest")
+GROQ_API_KEY = os.environ["GROQ_API_KEY"]
+AI_MODEL = os.environ.get("AI_MODEL", "llama-3.3-70b-versatile")
 
-# Grok uses the same format as OpenAI — just different base_url and key
-_ai_client = AsyncOpenAI(
-    api_key=GROK_API_KEY,
-    base_url="https://api.x.ai/v1",  # ← Grok's API endpoint. Change this URL to switch providers.
-)
+_ai_client = AsyncGroq(api_key=GROQ_API_KEY)
 
 
 async def call_ai(system_message: str, prompt: str) -> str:
-    """
-    Calls the AI API. All 7 AI features in this app use this one function.
-    To switch providers: change _ai_client above. Nothing else changes.
-    """
     response = await _ai_client.chat.completions.create(
         model=AI_MODEL,
         max_tokens=4096,
