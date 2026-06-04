@@ -48,6 +48,15 @@ def parse_ai_json(text: str):
                 continue
     return None
 
+COST_TABLE = {
+    "rank":            {"tokens": 3000, "cost": 0.003},
+    "questions":       {"tokens": 1500, "cost": 0.0015},
+    "enhance-jd":      {"tokens": 1200, "cost": 0.0012},
+    "draft-email":     {"tokens": 800,  "cost": 0.0008},
+    "compare":         {"tokens": 2000, "cost": 0.002},
+    "summary":         {"tokens": 1800, "cost": 0.0018},
+    "pipeline-health": {"tokens": 1000, "cost": 0.001},
+}
 
 async def log_usage(action: str, user_id: str = None, job_id: str = None, candidate_id: str = None):
     est = COST_TABLE.get(action, {"tokens": 1000, "cost": 0.001})
